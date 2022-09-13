@@ -76,14 +76,6 @@ jobs:
         if: steps.checkfileexists.outputs.ISEXISTS > 0
         run: gsutil -m rm -r gs://blackfin-docs.appspot.com/built-files/${{ inputs.projectName }}
 
-      - name: test1
-        id: teststep
-        run: echo '::set-output name=ISEXISTS::'$(echo $(gsutil du gs://blackfin-docs.appspot.com/idonotexists/ | wc -l))
-
-      - name: test2
-        if: steps.teststep.outputs.ISEXISTS > 0
-        run: echo 'Hi' ${{ steps.teststep.outputs.ISEXISTS }}
-
       - name: upload to google storage
         run: gsutil -m cp -r ${{ inputs.platformPath }} gs://blackfin-docs.appspot.com/built-files
 
