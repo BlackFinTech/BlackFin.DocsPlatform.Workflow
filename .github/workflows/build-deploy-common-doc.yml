@@ -68,7 +68,12 @@ jobs:
       - name: move built files over the ones deployed
         run: rm -rf ${{ inputs.platformPath }} && mv platform/docusaurus/build ${{ inputs.platformPath }}
 
+      - id: checkfileexists
+        name: remove current files on google storage
+        run: gsutil du gs://blackfin-docs.appspot.com/built-files/${{ inputs.projectName }} | wc -l
+
       - name: remove current files on google storage
+        if: checkfileexists.output
         run: gsutil -m rm -r gs://blackfin-docs.appspot.com/built-files/${{ inputs.projectName }}
 
       - name: upload to google storage
