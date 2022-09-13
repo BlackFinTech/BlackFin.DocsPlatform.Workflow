@@ -70,7 +70,7 @@ jobs:
 
       - name: check if file exists
         id: checkfileexists
-        run: echo '::set-output name=ISEXISTS::'$(echo gsutil du gs://blackfin-docs.appspot.com/built-files/${{ inputs.projectName }}/ | wc -l)
+        run: echo '::set-output name=ISEXISTS::'$(echo $(gsutil du gs://blackfin-docs.appspot.com/built-files/${{ inputs.projectName }}/ | wc -l))
 
       - name: remove current files on google storage
         if: steps.checkfileexists.outputs.ISEXISTS > 0
@@ -78,7 +78,7 @@ jobs:
 
       - name: test1
         id: teststep
-        run: echo '::set-output name=ISEXISTS::'$(echo gsutil du gs://blackfin-docs.appspot.com/idonotexists/ | wc -l)
+        run: echo '::set-output name=ISEXISTS::'$(echo $(gsutil du gs://blackfin-docs.appspot.com/idonotexists/ | wc -l))
 
       - name: test2
         if: steps.teststep.outputs.ISEXISTS > 0
