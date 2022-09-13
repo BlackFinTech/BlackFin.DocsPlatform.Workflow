@@ -81,7 +81,7 @@ jobs:
         run: echo '::set-output name=ISEXISTS::'$(echo gsutil du gs://blackfin-docs.appspot.com/idonotexists/ | wc -l)
 
       - name: test2
-        if: steps.teststep.outputs > 0
+        if: steps.teststep.outputs.ISEXISTS > 0
         run: echo 'Hi' ${{ steps.teststep.outputs.ISEXISTS }}
 
       - name: upload to google storage
