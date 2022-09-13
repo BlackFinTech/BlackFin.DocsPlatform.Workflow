@@ -1,0 +1,84 @@
+name: build-deploy-common-doc
+
+on:
+  workflow_call:
+    inputs:
+        projectName:
+          description: 'The project name'
+          required: true
+          type: string
+        platformPath:
+          description: 'The project doc platform path'
+          required: true
+          type: string
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [16.x]
+        
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+        with:
+          path: docs
+          fetch-depth: 0
+      - name: Checkout the docs platform
+        uses: actions/checkout@v3
+        with:
+          repository: BlackFinTech/BlackFin.DocsPlatform
+          ref: master
+          path: platform
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+      - name: Turnstyle
+        uses: softprops/turnstyle@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+      - name: Cache node modules
+        uses: actions/cache@v1
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: 'gcloud-auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
+      - name: npm install
+        run: cd platform/docusaurus && npm install && npm install -g firebase-tools
+        
+      - name: transfer docs
+        run: rm -rf platform/docusaurus/docs && mv docs platform/docusaurus/docs && cp -rf platform/docusaurus/docs/_docusaurus/* platform/docusaurus 
+      - name: build docs
+        run: cd platform/docusaurus && npm run build
+      - name: get current deployed files on hosting from google storage
+        run: gsutil -m cp -r gs://blackfin-docs.appspot.com/built-files/* platform/public
+
+      - name: move built files over the ones deployed
+        run: rm -rf ${{ inputs.platformPath }} && mv platform/docusaurus/build ${{ inputs.platformPath }}
+
+      - name: remove current files on google storage
+        run: gsutil -m rm -r gs://blackfin-docs.appspot.com/built-files/${{ inputs.projectName }}
+
+      - name: upload to google storage
+        run: gsutil -m cp -r ${{ inputs.platformPath }} gs://blackfin-docs.appspot.com/built-files
+
+      - name: clear index.html files (except for login folder)
+        run: cp platform/public/login/index.html ./index.html && cd platform/public && find . -name 'index.html' -delete && mv ./../../index.html ./login/index.html
+
+      - name: deploy to firebase
+        run: cd platform && firebase --token ${{ secrets.FIREBASE_TOKEN }} use blackfin-docs && firebase --token ${{ secrets.FIREBASE_TOKEN }} deploy --only hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT_ID: blackfin-docs
