@@ -82,7 +82,7 @@ jobs:
 
       - name: test2
         if: steps.teststep.outputs
-        run: echo 'Hi' ${{ steps.teststep.outputs }}
+        run: echo 'Hi' ${{ join(steps.teststep.outputs.*, '\n') }}
 
       - name: upload to google storage
         run: gsutil -m cp -r ${{ inputs.platformPath }} gs://blackfin-docs.appspot.com/built-files
